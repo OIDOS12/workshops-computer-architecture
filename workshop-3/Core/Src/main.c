@@ -44,6 +44,7 @@ ADC_HandleTypeDef hadc1;
 
 /* USER CODE BEGIN PV */
 
+//variables for debug
 uint32_t adcSum = 0;
 uint16_t adcCount = 0;
 float voltage = 0;
@@ -63,35 +64,43 @@ static void MX_ADC1_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
+    // Check if interrupt triggered by ADC1
     if(hadc->Instance == ADC1)
     {
-    	adcSum += HAL_ADC_GetValue(hadc);
-    	adcCount++;
+      // Add current reading to sum and increment counter
+      adcSum += HAL_ADC_GetValue(hadc);
+      adcCount++;
 
-		if(adcCount >= 256)
-		{
-			adcAvarage = adcSum >> 8;
-			voltage = (adcAvarage * 3.3f) / 4095.0f;
+    // Process every 256 samples
+    if(adcCount >= 256)
+    {
+      // Calculate average using bit shift (division by 256)
+      adcAvarage = adcSum >> 8;
+      
+      // Convert raw average to voltage
+      voltage = (adcAvarage * 3.3f) / 4095.0f;
 
-			if (adcAvarage < 2048) {
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET);
+      // Logic for LED switching based on midpoint
+      if (adcAvarage < 2048) {
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET);
+      } else {
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
+      }
 
-			} else {
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
-			}
+      // Reset variables
+      adcSum = 0;
+      adcCount = 0;
+    }
 
-			adcSum = 0;
-			adcCount = 0;
-		}
-
+        // Restart ADC
         HAL_ADC_Start_IT(hadc);
-	}
+  }
 }
 /* USER CODE END 0 */
 
@@ -132,6 +141,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+  // Initial ADC start
   HAL_ADC_Start_IT(&hadc1);
 
   while (1)
